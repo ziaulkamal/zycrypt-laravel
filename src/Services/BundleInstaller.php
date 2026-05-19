@@ -16,9 +16,6 @@ class BundleInstaller
         $this->projectRoot = base_path();
     }
 
-    /**
-     * Minta delivery token dari server lalu download dan ekstrak bundle.
-     */
     public function install(string $themeSlug, callable $log): bool
     {
         $log('Meminta delivery token dari server...');
@@ -56,8 +53,6 @@ class BundleInstaller
         return true;
     }
 
-    // ── Private ───────────────────────────────────────────────────────────────
-
     private function activate(string $themeSlug): ?array
     {
         $domain    = parse_url(config('app.url'), PHP_URL_HOST) ?? 'localhost';
@@ -94,18 +89,17 @@ class BundleInstaller
 
     private function decryptBundle(string $bundle): ?string
     {
-        $key  = substr(hash_hmac('sha256', 'bundle-key', $this->sharedSecret, true), 0, 32);
-        $raw  = base64_decode($bundle);
-        $iv   = substr($raw, 0, 16);
-        $data = substr($raw, 16);
-
+        $key    = substr(hash_hmac('sha256', 'bundle-key', $this->sharedSecret, true), 0, 32);
+        $raw    = base64_decode($bundle);
+        $iv     = substr($raw, 0, 16);
+        $data   = substr($raw, 16);
         $result = openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
+
         return $result ?: null;
     }
 
     private function extract(string $zipContent, callable $log): void
     {
-        // Tulis zip sementara
         $tmpZip = sys_get_temp_dir() . '/zycrypt-bundle-' . uniqid() . '.zip';
         file_put_contents($tmpZip, $zipContent);
 
@@ -123,13 +117,11 @@ class BundleInstaller
 
             if (! $dest) continue;
 
-            // Buat direktori tujuan
             $dir = dirname($dest);
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
 
-            // Backup jika file sudah ada
             if (file_exists($dest)) {
                 rename($dest, $dest . '.bak.' . date('Ymd_His'));
             }
@@ -142,22 +134,19 @@ class BundleInstaller
         unlink($tmpZip);
     }
 
-    /**
-     * Peta prefix ZIP → direktori tujuan di project.
-     */
     private function pathMap(): array
     {
         $js  = $this->projectRoot . '/resources/js';
         $css = $this->projectRoot . '/resources/css';
 
         return [
-            'components/' => $js . '/Components/',
-            'pages/'      => $js . '/Pages/',
-            'layouts/'    => $js . '/Layouts/',
-            'composables/'=> $js . '/Composables/',
-            'config/'     => $js . '/config/',
-            'data/'       => $js . '/data/',
-            'css/'        => $css . '/',
+            'components/'  => $js . '/Components/',
+            'pages/'       => $js . '/Pages/',
+            'layouts/'     => $js . '/Layouts/',
+            'composables/' => $js . '/Composables/',
+            'config/'      => $js . '/config/',
+            'data/'        => $js . '/data/',
+            'css/'         => $css . '/',
         ];
     }
 
@@ -166,7 +155,7 @@ class BundleInstaller
         foreach ($map as $prefix => $targetDir) {
             if (str_starts_with($entry, $prefix)) {
                 $relative = substr($entry, strlen($prefix));
-                if ($relative === '') continue; // skip direktori kosong
+                if ($relative === '') continue;
                 return $targetDir . $relative;
             }
         }

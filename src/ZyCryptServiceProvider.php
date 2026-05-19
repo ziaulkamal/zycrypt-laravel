@@ -4,10 +4,8 @@ namespace ZyCrypt\Laravel;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Contracts\Http\Kernel;
 use ZyCrypt\Laravel\Services\LicenseValidator;
 use ZyCrypt\Laravel\Services\DatabaseGuard;
-use ZyCrypt\Laravel\Middleware\VerifyZyCryptToken;
 use ZyCrypt\Laravel\Console\InstallCommand;
 use ZyCrypt\Laravel\Console\CheckCommand;
 use ZyCrypt\Laravel\Console\DbGuardCommand;
@@ -79,7 +77,6 @@ class ZyCryptServiceProvider extends ServiceProvider
 
     private function checkLicense(): void
     {
-        // Jangan cek saat CLI atau saat install artisan commands
         if ($this->app->runningInConsole()) {
             return;
         }
@@ -88,23 +85,20 @@ class ZyCryptServiceProvider extends ServiceProvider
         $result    = $validator->checkLock();
 
         if (! $result['valid']) {
-            // Force semua request ke halaman error — terapkan macro ke router
             $this->app->booted(function () use ($result) {
                 $this->forceErrorPage($result['reason'] ?? 'license_invalid', $result['detail'] ?? '');
             });
             return;
         }
 
-        // Lisensi valid — aktifkan sesi DB guard agar trigger tidak memblokir query
-        $this->app->booted(function () use ($validator) {
+        $this->app->booted(function () {
             $guard = $this->app->make(DatabaseGuard::class);
 
             if ($guard->isInstalled()) {
-                $token = $validator->generateToken();
+                $token = bin2hex(random_bytes(32));
                 try {
                     $guard->activateSession($token);
                 } catch (\Throwable) {
-                    // Guard ada tapi aktivasi gagal — blokir request
                     $this->forceErrorPage('db_guard_failure', 'Tidak dapat mengaktifkan sesi database.');
                 }
             }
@@ -125,10 +119,10 @@ class ZyCryptServiceProvider extends ServiceProvider
             }
 
             abort(response()->view('vendor.zycrypt.license-invalid', [
-                'reason'       => $reason,
-                'detail'       => $detail,
-                'product_name' => config('zycrypt.product_name'),
-                'contact_email'=> config('zycrypt.contact_email'),
+                'reason'        => $reason,
+                'detail'        => $detail,
+                'product_name'  => config('zycrypt.product_name'),
+                'contact_email' => config('zycrypt.contact_email'),
             ], 403));
         });
     }

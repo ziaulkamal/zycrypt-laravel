@@ -16,7 +16,6 @@ class CheckCommand extends Command
         $this->line('  Memeriksa status lisensi...');
         $this->newLine();
 
-        // Cek lock file lokal
         $lockPath = config('zycrypt.lock_path');
         if (file_exists($lockPath)) {
             $lock = $validator->readLock();
@@ -33,7 +32,6 @@ class CheckCommand extends Command
             $this->newLine();
         }
 
-        // Re-validate ke server
         $this->line('  Validasi ke server...');
         $result = $validator->validate();
 

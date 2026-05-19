@@ -16,7 +16,6 @@ class VerifyZyCryptToken
         $token = $request->header('X-ZyCrypt-Token');
 
         if (! $token || ! $this->validator->verifyToken($token)) {
-            // Bedakan response berdasarkan request type
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'valid'  => false,
@@ -25,7 +24,6 @@ class VerifyZyCryptToken
                 ], 403);
             }
 
-            // Request biasa — kembalikan ke halaman error
             return response()->view('vendor.zycrypt.license-invalid', [
                 'reason'        => 'token_expired',
                 'detail'        => 'Sesi lisensi Anda telah berakhir.',

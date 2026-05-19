@@ -13,27 +13,18 @@ class DatabaseGuard
     public function __construct()
     {
         $this->db     = DB::connection();
-        $this->driver = $this->db->getDriverName(); // mysql | pgsql | sqlite
+        $this->driver = $this->db->getDriverName();
     }
 
-    // ── Public API ─────────────────────────────────────────────────────────────
-
-    /**
-     * Install zycrypt_tokens table + triggers/RLS into the application database.
-     * Idempotent — safe to run multiple times.
-     */
     public function install(): void
     {
         match ($this->driver) {
             'pgsql'  => $this->installPostgres(),
             'mysql'  => $this->installMysql(),
-            default  => null,   // sqlite / testing — skip silently
+            default  => null,
         };
     }
 
-    /**
-     * Remove all ZyCrypt database guards (triggers, RLS, table).
-     */
     public function remove(): void
     {
         match ($this->driver) {
@@ -43,12 +34,6 @@ class DatabaseGuard
         };
     }
 
-    /**
-     * Emit a short-lived session token into the database.
-     * Must be called on every HTTP request BEFORE any query runs.
-     *
-     * @param string $token  Opaque token issued by LicenseValidator::generateToken()
-     */
     public function activateSession(string $token): void
     {
         match ($this->driver) {
@@ -58,9 +43,6 @@ class DatabaseGuard
         };
     }
 
-    /**
-     * True when the guard table exists in the current DB.
-     */
     public function isInstalled(): bool
     {
         try {
@@ -79,10 +61,6 @@ class DatabaseGuard
         }
     }
 
-    /**
-     * List all application tables (excluding zycrypt_ prefixed ones).
-     * Used to know which tables to attach triggers to.
-     */
     public function applicationTables(): array
     {
         return match ($this->driver) {
@@ -108,11 +86,8 @@ class DatabaseGuard
         };
     }
 
-    // ── PostgreSQL ─────────────────────────────────────────────────────────────
-
     private function installPostgres(): void
     {
-        // 1. Token table
         $this->db->unprepared(<<<'SQL'
             CREATE TABLE IF NOT EXISTS zycrypt_tokens (
                 id         BIGSERIAL PRIMARY KEY,
@@ -124,7 +99,6 @@ class DatabaseGuard
             CREATE INDEX IF NOT EXISTS idx_zycrypt_tokens_exp   ON zycrypt_tokens (expires_at);
         SQL);
 
-        // 2. Validation function — called by every trigger
         $this->db->unprepared(<<<'SQL'
             CREATE OR REPLACE FUNCTION zycrypt_check_session()
             RETURNS TRIGGER LANGUAGE plpgsql AS $$
@@ -156,7 +130,6 @@ class DatabaseGuard
             $$;
         SQL);
 
-        // 3. Cleanup function — removes stale tokens
         $this->db->unprepared(<<<'SQL'
             CREATE OR REPLACE FUNCTION zycrypt_cleanup_tokens()
             RETURNS void LANGUAGE plpgsql AS $$
@@ -166,7 +139,6 @@ class DatabaseGuard
             $$;
         SQL);
 
-        // 4. Attach trigger to every application table
         foreach ($this->applicationTables() as $table) {
             $triggerName = 'zycrypt_guard_' . $table;
             $this->db->unprepared(<<<SQL
@@ -180,7 +152,6 @@ class DatabaseGuard
 
     private function removePostgres(): void
     {
-        // Remove triggers from all tables
         $triggers = $this->db->select(<<<'SQL'
             SELECT trigger_name, event_object_table
             FROM   information_schema.triggers
@@ -203,26 +174,20 @@ class DatabaseGuard
 
     private function activatePostgres(string $token): void
     {
-        // Persist token record (15-minute window covers normal request lifecycle)
         $this->db->statement(
             "INSERT INTO zycrypt_tokens (token, expires_at) VALUES (?, NOW() + INTERVAL '15 minutes')",
             [$token]
         );
 
-        // Set session variable — triggers read this
         $this->db->statement("SELECT set_config('app.zycrypt_token', ?, false)", [$token]);
 
-        // Opportunistic cleanup (1-in-50 chance per request to keep table lean)
         if (random_int(1, 50) === 1) {
             $this->db->statement('SELECT zycrypt_cleanup_tokens()');
         }
     }
 
-    // ── MySQL ──────────────────────────────────────────────────────────────────
-
     private function installMysql(): void
     {
-        // 1. Token table
         $this->db->unprepared(<<<'SQL'
             CREATE TABLE IF NOT EXISTS zycrypt_tokens (
                 id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -234,30 +199,19 @@ class DatabaseGuard
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         SQL);
 
-        // 2. Attach triggers to every application table
-        //    MySQL has no stored function readable inside triggers for session vars,
-        //    so we use @zycrypt_token user variable and check against the table directly.
         foreach ($this->applicationTables() as $table) {
-            $ins = 'zycrypt_ins_' . $table;
-            $upd = 'zycrypt_upd_' . $table;
-            $del = 'zycrypt_del_' . $table;
+            $ins  = 'zycrypt_ins_' . $table;
+            $upd  = 'zycrypt_upd_' . $table;
+            $del  = 'zycrypt_del_' . $table;
+            $body = $this->mysqlTriggerBody();
 
-            // Drop existing before re-creating
             $this->db->unprepared("DROP TRIGGER IF EXISTS `{$ins}`");
             $this->db->unprepared("DROP TRIGGER IF EXISTS `{$upd}`");
             $this->db->unprepared("DROP TRIGGER IF EXISTS `{$del}`");
 
-            $body = $this->mysqlTriggerBody();
-
-            $this->db->unprepared(<<<SQL
-                CREATE TRIGGER `{$ins}` BEFORE INSERT ON `{$table}` FOR EACH ROW BEGIN {$body} END
-            SQL);
-            $this->db->unprepared(<<<SQL
-                CREATE TRIGGER `{$upd}` BEFORE UPDATE ON `{$table}` FOR EACH ROW BEGIN {$body} END
-            SQL);
-            $this->db->unprepared(<<<SQL
-                CREATE TRIGGER `{$del}` BEFORE DELETE ON `{$table}` FOR EACH ROW BEGIN {$body} END
-            SQL);
+            $this->db->unprepared("CREATE TRIGGER `{$ins}` BEFORE INSERT ON `{$table}` FOR EACH ROW BEGIN {$body} END");
+            $this->db->unprepared("CREATE TRIGGER `{$upd}` BEFORE UPDATE ON `{$table}` FOR EACH ROW BEGIN {$body} END");
+            $this->db->unprepared("CREATE TRIGGER `{$del}` BEFORE DELETE ON `{$table}` FOR EACH ROW BEGIN {$body} END");
         }
     }
 
@@ -294,7 +248,6 @@ class DatabaseGuard
             [$token]
         );
 
-        // Set user-defined variable — visible within this connection only
         $this->db->statement('SET @zycrypt_token = ?', [$token]);
 
         if (random_int(1, 50) === 1) {
