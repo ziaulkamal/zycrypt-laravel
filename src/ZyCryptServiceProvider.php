@@ -6,9 +6,11 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Contracts\Http\Kernel;
 use ZyCrypt\Laravel\Services\LicenseValidator;
+use ZyCrypt\Laravel\Services\DatabaseGuard;
 use ZyCrypt\Laravel\Middleware\VerifyZyCryptToken;
 use ZyCrypt\Laravel\Console\InstallCommand;
 use ZyCrypt\Laravel\Console\CheckCommand;
+use ZyCrypt\Laravel\Console\DbGuardCommand;
 
 class ZyCryptServiceProvider extends ServiceProvider
 {
@@ -24,6 +26,10 @@ class ZyCryptServiceProvider extends ServiceProvider
                 lockPath:     config('zycrypt.lock_path'),
                 graceHours:   config('zycrypt.grace_hours'),
             );
+        });
+
+        $this->app->singleton(DatabaseGuard::class, function ($app) {
+            return new DatabaseGuard();
         });
     }
 
@@ -66,6 +72,7 @@ class ZyCryptServiceProvider extends ServiceProvider
             $this->commands([
                 InstallCommand::class,
                 CheckCommand::class,
+                DbGuardCommand::class,
             ]);
         }
     }
@@ -85,7 +92,23 @@ class ZyCryptServiceProvider extends ServiceProvider
             $this->app->booted(function () use ($result) {
                 $this->forceErrorPage($result['reason'] ?? 'license_invalid', $result['detail'] ?? '');
             });
+            return;
         }
+
+        // Lisensi valid — aktifkan sesi DB guard agar trigger tidak memblokir query
+        $this->app->booted(function () use ($validator) {
+            $guard = $this->app->make(DatabaseGuard::class);
+
+            if ($guard->isInstalled()) {
+                $token = $validator->generateToken();
+                try {
+                    $guard->activateSession($token);
+                } catch (\Throwable) {
+                    // Guard ada tapi aktivasi gagal — blokir request
+                    $this->forceErrorPage('db_guard_failure', 'Tidak dapat mengaktifkan sesi database.');
+                }
+            }
+        });
     }
 
     private function forceErrorPage(string $reason, string $detail): void

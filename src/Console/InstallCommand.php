@@ -84,6 +84,22 @@ class InstallCommand extends Command
             $this->patchAppTs();
         }
 
+        // ── Step 6: Pasang database guard (opsional) ─────────────────────────
+        $this->newLine();
+        $this->info('  Database Guard (Lapisan Keamanan Tambahan)');
+        $this->line('  Guard ini menyisipkan trigger di database sehingga aplikasi tetap');
+        $this->line('  terlindungi meskipun package ZyCrypt dihapus.');
+        $this->newLine();
+
+        if ($this->confirm('  Pasang database guard sekarang?', true)) {
+            $exitCode = $this->call('zycrypt:guard', ['action' => 'install']);
+            if ($exitCode !== self::SUCCESS) {
+                $this->warn('  ⚠ Database guard gagal dipasang. Lanjutkan tanpa guard.');
+            }
+        } else {
+            $this->line('  Database guard dilewati. Jalankan nanti: php artisan zycrypt:guard install');
+        }
+
         // ── Selesai ──────────────────────────────────────────────────────────
         $this->newLine();
         $this->printSuccess();
@@ -148,7 +164,8 @@ class InstallCommand extends Command
         $this->line('  Langkah selanjutnya:');
         $this->line('  1. npm install');
         $this->line('  2. npm run build');
-        $this->line('  3. php artisan zycrypt:check  (verifikasi ulang)');
+        $this->line('  3. php artisan zycrypt:check           (verifikasi lisensi)');
+        $this->line('  4. php artisan zycrypt:guard status    (cek status DB guard)');
         $this->newLine();
     }
 }
