@@ -1,0 +1,43 @@
+{
+    "name": "ziaulkamal/zycrypt-laravel",
+    "description": "ZyCrypt license protection for Laravel + Vue + Inertia.js applications",
+    "type": "library",
+    "license": "proprietary",
+    "authors": [
+        {
+            "name": "Ziaul Kamal",
+            "email": "zia.private.acc@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0|^13.0",
+        "ext-openssl": "*",
+        "ext-json": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "ZyCrypt\\Laravel\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "ZyCrypt\\Laravel\\ZyCryptServiceProvider"
+            ],
+            "aliases": {
+                "ZyCrypt": "ZyCrypt\\Laravel\\Facades\\ZyCrypt"
+            }
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "ZyCrypt\\Laravel\\Scripts\\PostInstall::run"
+        ],
+        "post-update-cmd": [
+            "ZyCrypt\\Laravel\\Scripts\\PostInstall::run"
+        ]
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
