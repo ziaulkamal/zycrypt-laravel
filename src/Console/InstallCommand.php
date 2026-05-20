@@ -152,6 +152,12 @@ class InstallCommand extends Command
             return null;
         }
 
+        if (count($themes) === 1) {
+            $t = $themes[0];
+            $this->line("  ✓ Tema dipilih otomatis: {$t['name']} (v{$t['version']})");
+            return $t['slug'];
+        }
+
         $choices = [];
         $map     = [];
         foreach ($themes as $t) {
