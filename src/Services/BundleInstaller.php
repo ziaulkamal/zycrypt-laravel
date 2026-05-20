@@ -147,11 +147,18 @@ class BundleInstaller
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $entry = str_replace('\\', '/', $zip->getNameIndex($i));
-            $dest  = $this->resolveDest($entry, $map);
+
+            if (str_ends_with($entry, '/')) {
+                continue;
+            }
+
+            $dest = $this->resolveDest($entry, $map);
 
             if (! $dest) continue;
 
-            $dir = dirname($dest);
+            $dest = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $dest);
+            $dir  = dirname($dest);
+
             if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }
