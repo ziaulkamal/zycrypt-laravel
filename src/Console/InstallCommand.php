@@ -79,8 +79,8 @@ class InstallCommand extends Command
 
             $this->newLine();
             $this->line('  <fg=yellow>⚠</> Selesaikan setup frontend secara manual:');
-            $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
-            $this->line("      npm install {$pkgName} --save");
+            $installPath = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
+            $this->line("      npm install {$installPath} --save");
             $this->line('      npm run build');
             $this->newLine();
         }
@@ -169,8 +169,7 @@ class InstallCommand extends Command
             return;
         }
 
-        $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
-        $import  = "import ZyCrypt from '{$pkgName}';\n";
+        $import  = "import ZyCrypt from '@ziaulkamal/zycrypt-vue';\n";
         $useStmt = "            .use(ZyCrypt, {\n"
                  . "                serverUrl:  '/zycrypt/token',\n"
                  . "                graceHours: " . config('zycrypt.grace_hours', 24) . ",\n"
@@ -230,9 +229,9 @@ class InstallCommand extends Command
         $this->line('  Lisensi   : <fg=green>Valid</>');
         $this->line('  DB Guard  : <fg=green>Aktif</>');
         $this->newLine();
-        $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
+        $installPath = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
         $this->line('  Langkah selanjutnya:');
-        $this->line("    1. npm install {$pkgName} --save");
+        $this->line("    1. npm install {$installPath} --save");
         $this->line('    2. npm run build');
         $this->line('    3. php artisan serve');
         $this->newLine();
