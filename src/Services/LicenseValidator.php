@@ -177,7 +177,7 @@ class LicenseValidator
     private function decryptPayload(string $base64): array
     {
         $raw    = base64_decode($base64);
-        $key    = substr(hash_hmac('sha256', 'aes-key-derivation', $this->sharedSecret, true), 0, 32);
+        $key    = substr(hash_hmac('sha256', 'aes-key-derivation', $this->sharedSecret), 0, 32);
         $nonce  = substr($raw, 0, 12);
         $body   = substr($raw, 12);
         $tag    = substr($body, -16);
