@@ -146,7 +146,7 @@ class BundleInstaller
         $map = $this->pathMap();
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
-            $entry = $zip->getNameIndex($i);
+            $entry = str_replace('\\', '/', $zip->getNameIndex($i));
             $dest  = $this->resolveDest($entry, $map);
 
             if (! $dest) continue;
