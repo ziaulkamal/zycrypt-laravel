@@ -7,11 +7,11 @@ use Illuminate\Support\Facades\Http;
 class LicenseValidator
 {
     public function __construct(
-        private readonly string $serverUrl,
-        private readonly string $licenseKey,
-        private readonly string $sharedSecret,
-        private readonly string $lockPath,
-        private readonly int    $graceHours,
+        private readonly string  $serverUrl,
+        private readonly ?string $licenseKey,
+        private readonly ?string $sharedSecret,
+        private readonly string  $lockPath,
+        private readonly int     $graceHours,
     ) {}
 
     public function checkLock(): array
@@ -92,6 +92,10 @@ class LicenseValidator
 
     public function verifyToken(string $token): bool
     {
+        if (! $this->sharedSecret) {
+            return false;
+        }
+
         $parts = explode('.', $token, 2);
         if (count($parts) !== 2) {
             return false;
