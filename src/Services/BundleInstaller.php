@@ -163,10 +163,6 @@ class BundleInstaller
                 mkdir($dir, 0755, true);
             }
 
-            if (file_exists($dest)) {
-                rename($dest, $dest . '.bak.' . date('Ymd_His'));
-            }
-
             file_put_contents($dest, $zip->getFromIndex($i));
             $log('  ✓ ' . $entry);
         }
