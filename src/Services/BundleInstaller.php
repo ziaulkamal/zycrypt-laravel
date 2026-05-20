@@ -179,17 +179,15 @@ class BundleInstaller
         $views = $root . '/resources/views';
 
         return [
-            'components/'  => $js   . '/Components/',
-            'pages/'       => $js   . '/Pages/',
-            'layouts/'     => $js   . '/Layouts/',
-            'composables/' => $js   . '/Composables/',
-            'config/'      => $js   . '/config/',
-            'data/'        => $js   . '/data/',
-            'css/'         => $css  . '/',
+            'components/'  => $js    . '/Components/',
+            'pages/'       => $js    . '/Pages/',
+            'layouts/'     => $js    . '/Layouts/',
+            'composables/' => $js    . '/Composables/',
+            'config/'      => $js    . '/config/',
+            'data/'        => $js    . '/data/',
+            'css/'         => $css   . '/',
             'views/'       => $views . '/',
-            'root/'        => $root . '/',
-            'app/'         => $js   . '/',
-            'routes/'      => $root . '/routes/',
+            'app/'         => $js    . '/',
         ];
     }
 
