@@ -5,6 +5,7 @@ namespace ZyCrypt\Laravel;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Route;
 use ZyCrypt\Laravel\Services\LicenseValidator;
+use ZyCrypt\Laravel\Services\BundleInstaller;
 use ZyCrypt\Laravel\Services\DatabaseGuard;
 use ZyCrypt\Laravel\Console\InstallCommand;
 use ZyCrypt\Laravel\Console\CheckCommand;
@@ -24,6 +25,14 @@ class ZyCryptServiceProvider extends ServiceProvider
                 sharedSecret: config('zycrypt.shared_secret'),
                 lockPath:     config('zycrypt.lock_path'),
                 graceHours:   config('zycrypt.grace_hours'),
+            );
+        });
+
+        $this->app->singleton(BundleInstaller::class, function ($app) {
+            return new BundleInstaller(
+                serverUrl:    config('zycrypt.server_url'),
+                licenseKey:   config('zycrypt.license_key'),
+                sharedSecret: config('zycrypt.shared_secret'),
             );
         });
 

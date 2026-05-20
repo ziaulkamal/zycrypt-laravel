@@ -9,9 +9,9 @@ class BundleInstaller
     private string $projectRoot;
 
     public function __construct(
-        private readonly string $serverUrl,
-        private readonly string $licenseKey,
-        private readonly string $sharedSecret,
+        private readonly string  $serverUrl,
+        private readonly ?string $licenseKey,
+        private readonly ?string $sharedSecret,
     ) {
         $this->projectRoot = base_path();
     }
