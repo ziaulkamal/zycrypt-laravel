@@ -3,7 +3,6 @@
 namespace ZyCrypt\Laravel\Console;
 
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Process;
 use ZyCrypt\Laravel\Services\LicenseValidator;
 use ZyCrypt\Laravel\Services\BundleInstaller;
 
@@ -78,31 +77,12 @@ class InstallCommand extends Command
             // ── Step 7: Setup routes ──────────────────────────────────────────
             $this->task('Menyiapkan routes', fn() => $this->setupRoutes());
 
-            // ── Step 8: Install npm dependencies ─────────────────────────────
             $this->newLine();
-            $this->task('Menjalankan npm install', function () {
-                $result = Process::path(base_path())->timeout(300)->run('npm install');
-                if (! $result->successful()) {
-                    throw new \RuntimeException($result->errorOutput());
-                }
-            });
-
-            // ── Step 9: Install zycrypt-vue ───────────────────────────────────
-            $this->task('Menginstall zycrypt-vue', function () {
-                $pkgPath = config('zycrypt.npm_package_path', 'zycrypt-vue');
-                $result  = Process::path(base_path())->timeout(120)->run("npm install {$pkgPath} --save");
-                if (! $result->successful()) {
-                    throw new \RuntimeException($result->errorOutput());
-                }
-            });
-
-            // ── Step 10: Build frontend ───────────────────────────────────────
-            $this->task('Build frontend (npm run build)', function () {
-                $result = Process::path(base_path())->timeout(300)->run('npm run build');
-                if (! $result->successful()) {
-                    throw new \RuntimeException($result->errorOutput());
-                }
-            });
+            $this->line('  <fg=yellow>⚠</> Selesaikan setup frontend secara manual:');
+            $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
+            $this->line("      npm install {$pkgName} --save");
+            $this->line('      npm run build');
+            $this->newLine();
         }
 
         // ── Step 11: Database guard ───────────────────────────────────────────
@@ -249,9 +229,12 @@ class InstallCommand extends Command
 
         $this->line('  Lisensi   : <fg=green>Valid</>');
         $this->line('  DB Guard  : <fg=green>Aktif</>');
-        $this->line('  Frontend  : <fg=green>Built</>');
         $this->newLine();
-        $this->line('  Jalankan  : <fg=cyan>php artisan serve</>');
+        $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
+        $this->line('  Langkah selanjutnya:');
+        $this->line("    1. npm install {$pkgName} --save");
+        $this->line('    2. npm run build');
+        $this->line('    3. php artisan serve');
         $this->newLine();
     }
 }
