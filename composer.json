@@ -12,6 +12,7 @@
     "require": {
         "php": "^8.2",
         "laravel/framework": "^11.0|^12.0|^13.0",
+        "inertiajs/inertia-laravel": "^2.0",
         "ext-openssl": "*",
         "ext-json": "*"
     },
