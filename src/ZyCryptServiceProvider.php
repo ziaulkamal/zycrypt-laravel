@@ -9,6 +9,7 @@ use ZyCrypt\Laravel\Services\DatabaseGuard;
 use ZyCrypt\Laravel\Console\InstallCommand;
 use ZyCrypt\Laravel\Console\CheckCommand;
 use ZyCrypt\Laravel\Console\DbGuardCommand;
+use ZyCrypt\Laravel\Http\Controllers\ZyCryptProxyController;
 
 class ZyCryptServiceProvider extends ServiceProvider
 {
@@ -59,7 +60,7 @@ class ZyCryptServiceProvider extends ServiceProvider
         Route::prefix('zycrypt')
             ->middleware('web')
             ->group(function () {
-                Route::post('/token', [Http\Controllers\ZyCryptProxyController::class, 'token'])
+                Route::post('/token', [ZyCryptProxyController::class, 'token'])
                     ->name('zycrypt.token');
             });
     }
