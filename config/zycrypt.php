@@ -84,6 +84,6 @@ return [
         'telescope/*',
     ],
 
-    'npm_package_path' => env('ZYCRYPT_NPM_PATH', 'github:ziaulkamal/zycrypt-vue'),
+    'npm_package_path' => env('ZYCRYPT_NPM_PATH', '@ziaulkamal/zycrypt-vue'),
 
 ];

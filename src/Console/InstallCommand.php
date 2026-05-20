@@ -179,11 +179,12 @@ class InstallCommand extends Command
         }
 
         $content = file_get_contents($path);
-        if (str_contains($content, 'zycrypt-vue')) {
+        if (str_contains($content, '@ziaulkamal/zycrypt-vue')) {
             return;
         }
 
-        $import  = "import ZyCrypt from 'zycrypt-vue';\n";
+        $pkgName = config('zycrypt.npm_package_path', '@ziaulkamal/zycrypt-vue');
+        $import  = "import ZyCrypt from '{$pkgName}';\n";
         $useStmt = "            .use(ZyCrypt, {\n"
                  . "                serverUrl:  '/zycrypt/token',\n"
                  . "                graceHours: " . config('zycrypt.grace_hours', 24) . ",\n"
