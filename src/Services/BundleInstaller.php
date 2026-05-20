@@ -58,14 +58,14 @@ class BundleInstaller
         }
 
         $log('Memverifikasi checksum...');
-        $decrypted = $this->decryptBundle($bundle);
+        $decrypted = $this->decryptBundle($bundle['data']);
         if (! $decrypted) {
             $log('✗ Dekripsi bundle gagal.');
             return false;
         }
 
         $actualChecksum = hash('sha256', $decrypted);
-        if ($actualChecksum !== $activation['checksum']) {
+        if ($actualChecksum !== $bundle['checksum']) {
             $log('✗ Checksum tidak cocok. Bundle mungkin rusak atau dimanipulasi.');
             return false;
         }
@@ -97,23 +97,34 @@ class BundleInstaller
         }
     }
 
-    private function download(string $deliveryToken): ?string
+    private function download(string $deliveryToken): ?array
     {
         try {
             $response = Http::timeout(120)->get(
                 $this->serverUrl . '/api/v1/download/' . $deliveryToken
             );
 
-            return $response->successful() ? $response->body() : null;
+            if (! $response->successful()) {
+                return null;
+            }
+
+            $data     = $response->json('data');
+            $checksum = $response->json('checksum');
+
+            if (! $data || ! $checksum) {
+                return null;
+            }
+
+            return ['data' => $data, 'checksum' => $checksum];
         } catch (\Throwable) {
             return null;
         }
     }
 
-    private function decryptBundle(string $base64Body): ?string
+    private function decryptBundle(string $base64Data): ?string
     {
-        $key    = substr(hash_hmac('sha256', 'bundle-key', $this->sharedSecret, true), 0, 32);
-        $raw    = base64_decode($base64Body);
+        $key    = substr(hash_hmac('sha256', 'bundle-key', $this->sharedSecret), 0, 32);
+        $raw    = base64_decode($base64Data);
         $iv     = substr($raw, 0, 16);
         $data   = substr($raw, 16);
         $result = openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
