@@ -115,6 +115,8 @@ class LicenseValidator
             mkdir($lockDir, 0755, true);
         }
 
+        $existing = file_exists($this->lockPath) ? ($this->readLock() ?? []) : [];
+
         $content = json_encode([
             'validated_at'  => now()->toIso8601String(),
             'license_key'   => $this->licenseKey,
@@ -123,9 +125,20 @@ class LicenseValidator
             'is_lifetime'   => $data['is_lifetime'] ?? false,
             'site_limit'    => $data['site_limit'] ?? 1,
             'session_token' => $data['session_token'] ?? null,
+            'guard_installed' => $data['guard_installed'] ?? ($existing['guard_installed'] ?? false),
         ]);
 
         file_put_contents($this->lockPath, base64_encode($content));
+    }
+
+    public function markGuardInstalled(): void
+    {
+        $lock = $this->readLock();
+        if (! $lock) {
+            return;
+        }
+        $lock['guard_installed'] = true;
+        file_put_contents($this->lockPath, base64_encode(json_encode($lock)));
     }
 
     public function readLock(): ?array

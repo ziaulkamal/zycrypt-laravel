@@ -4,6 +4,7 @@ namespace ZyCrypt\Laravel\Console;
 
 use Illuminate\Console\Command;
 use ZyCrypt\Laravel\Services\DatabaseGuard;
+use ZyCrypt\Laravel\Services\LicenseValidator;
 
 class DbGuardCommand extends Command
 {
@@ -13,19 +14,19 @@ class DbGuardCommand extends Command
 
     protected $description = 'Kelola database-level guard (triggers/token table) untuk ZyCrypt';
 
-    public function handle(DatabaseGuard $guard): int
+    public function handle(DatabaseGuard $guard, LicenseValidator $validator): int
     {
         $action = $this->argument('action');
 
         return match ($action) {
-            'install' => $this->runInstall($guard),
-            'remove'  => $this->runRemove($guard),
+            'install' => $this->runInstall($guard, $validator),
+            'remove'  => $this->runRemove($guard, $validator),
             'status'  => $this->runStatus($guard),
             default   => $this->badAction($action),
         };
     }
 
-    private function runInstall(DatabaseGuard $guard): int
+    private function runInstall(DatabaseGuard $guard, LicenseValidator $validator): int
     {
         $this->newLine();
         $this->line('  ╔══════════════════════════════════════╗');
@@ -70,10 +71,12 @@ class DbGuardCommand extends Command
         $this->line('  Untuk menonaktifkan, jalankan: php artisan zycrypt:guard remove');
         $this->newLine();
 
+        $validator->markGuardInstalled();
+
         return self::SUCCESS;
     }
 
-    private function runRemove(DatabaseGuard $guard): int
+    private function runRemove(DatabaseGuard $guard, LicenseValidator $validator): int
     {
         $this->newLine();
 

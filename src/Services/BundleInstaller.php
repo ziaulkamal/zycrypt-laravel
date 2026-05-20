@@ -16,34 +16,57 @@ class BundleInstaller
         $this->projectRoot = base_path();
     }
 
+    public function availableThemes(): array
+    {
+        $domain    = parse_url(config('app.url'), PHP_URL_HOST) ?? 'localhost';
+        $timestamp = now()->timestamp;
+        $sig       = hash_hmac('sha256', $this->licenseKey . ':' . $domain . ':' . $timestamp, $this->sharedSecret);
+
+        try {
+            $response = Http::timeout(10)->post($this->serverUrl . '/api/v1/themes', [
+                'license_key' => $this->licenseKey,
+                'domain'      => $domain,
+                'timestamp'   => $timestamp,
+                'signature'   => $sig,
+            ]);
+
+            if ($response->successful()) {
+                return $response->json('themes') ?? [];
+            }
+        } catch (\Throwable) {}
+
+        return [];
+    }
+
     public function install(string $themeSlug, callable $log): bool
     {
         $log('Meminta delivery token dari server...');
 
-        $token = $this->activate($themeSlug);
-        if (! $token) {
+        $activation = $this->activate($themeSlug);
+        if (! $activation) {
             $log('✗ Gagal mendapatkan delivery token.');
             return false;
         }
 
+        $log('✓ Tema tersedia: ' . ($activation['theme_name'] ?? $themeSlug) . ' v' . ($activation['theme_version'] ?? '?'));
         $log('Mengunduh bundle tema...');
-        $bundle = $this->download($token['delivery_token']);
+
+        $bundle = $this->download($activation['delivery_token']);
         if (! $bundle) {
             $log('✗ Gagal mengunduh bundle.');
             return false;
         }
 
         $log('Memverifikasi checksum...');
-        $actualChecksum = hash('sha256', $bundle);
-        if ($actualChecksum !== $token['checksum']) {
-            $log('✗ Checksum tidak cocok. Bundle mungkin rusak atau dimanipulasi.');
-            return false;
-        }
-
-        $log('Mendekripsi bundle...');
         $decrypted = $this->decryptBundle($bundle);
         if (! $decrypted) {
             $log('✗ Dekripsi bundle gagal.');
+            return false;
+        }
+
+        $actualChecksum = hash('sha256', $decrypted);
+        if ($actualChecksum !== $activation['checksum']) {
+            $log('✗ Checksum tidak cocok. Bundle mungkin rusak atau dimanipulasi.');
             return false;
         }
 
@@ -57,7 +80,7 @@ class BundleInstaller
     {
         $domain    = parse_url(config('app.url'), PHP_URL_HOST) ?? 'localhost';
         $timestamp = now()->timestamp;
-        $sig       = hash_hmac('sha256', $this->licenseKey . ':' . $domain . ':' . $timestamp, $this->sharedSecret);
+        $sig       = hash_hmac('sha256', $this->licenseKey . ':' . $domain . ':' . $themeSlug . ':' . $timestamp, $this->sharedSecret);
 
         try {
             $response = Http::timeout(30)->post($this->serverUrl . '/api/v1/activate', [
@@ -87,10 +110,10 @@ class BundleInstaller
         }
     }
 
-    private function decryptBundle(string $bundle): ?string
+    private function decryptBundle(string $base64Body): ?string
     {
         $key    = substr(hash_hmac('sha256', 'bundle-key', $this->sharedSecret, true), 0, 32);
-        $raw    = base64_decode($bundle);
+        $raw    = base64_decode($base64Body);
         $iv     = substr($raw, 0, 16);
         $data   = substr($raw, 16);
         $result = openssl_decrypt($data, 'AES-256-CBC', $key, OPENSSL_RAW_DATA, $iv);
@@ -136,17 +159,23 @@ class BundleInstaller
 
     private function pathMap(): array
     {
-        $js  = $this->projectRoot . '/resources/js';
-        $css = $this->projectRoot . '/resources/css';
+        $root = $this->projectRoot;
+        $js   = $root . '/resources/js';
+        $css  = $root . '/resources/css';
+        $views = $root . '/resources/views';
 
         return [
-            'components/'  => $js . '/Components/',
-            'pages/'       => $js . '/Pages/',
-            'layouts/'     => $js . '/Layouts/',
-            'composables/' => $js . '/Composables/',
-            'config/'      => $js . '/config/',
-            'data/'        => $js . '/data/',
-            'css/'         => $css . '/',
+            'components/'  => $js   . '/Components/',
+            'pages/'       => $js   . '/Pages/',
+            'layouts/'     => $js   . '/Layouts/',
+            'composables/' => $js   . '/Composables/',
+            'config/'      => $js   . '/config/',
+            'data/'        => $js   . '/data/',
+            'css/'         => $css  . '/',
+            'views/'       => $views . '/',
+            'root/'        => $root . '/',
+            'app/'         => $js   . '/',
+            'routes/'      => $root . '/routes/',
         ];
     }
 

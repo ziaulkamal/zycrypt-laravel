@@ -91,10 +91,25 @@ class ZyCryptServiceProvider extends ServiceProvider
             return;
         }
 
-        $this->app->booted(function () {
+        $this->app->booted(function () use ($validator) {
             $guard = $this->app->make(DatabaseGuard::class);
+            $lock  = $validator->readLock() ?? [];
 
-            if ($guard->isInstalled()) {
+            $guardWasInstalled = ! empty($lock['guard_installed']);
+            $guardIsInstalled  = $guard->isInstalled();
+
+            if ($guardWasInstalled && ! $guardIsInstalled) {
+                try {
+                    $guard->install();
+                    $guardIsInstalled = true;
+                    $validator->markGuardInstalled();
+                } catch (\Throwable) {
+                    $this->forceErrorPage('db_guard_missing', 'Proteksi database tidak aktif.');
+                    return;
+                }
+            }
+
+            if ($guardIsInstalled) {
                 $token = bin2hex(random_bytes(32));
                 try {
                     $guard->activateSession($token);
