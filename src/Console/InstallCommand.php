@@ -81,7 +81,7 @@ class InstallCommand extends Command
             // ── Step 8: Install npm dependencies ─────────────────────────────
             $this->newLine();
             $this->task('Menjalankan npm install', function () {
-                $result = Process::path(base_path())->run('npm install');
+                $result = Process::path(base_path())->timeout(300)->run('npm install');
                 if (! $result->successful()) {
                     throw new \RuntimeException($result->errorOutput());
                 }
@@ -90,7 +90,7 @@ class InstallCommand extends Command
             // ── Step 9: Install zycrypt-vue ───────────────────────────────────
             $this->task('Menginstall zycrypt-vue', function () {
                 $pkgPath = config('zycrypt.npm_package_path', 'zycrypt-vue');
-                $result  = Process::path(base_path())->run("npm install {$pkgPath} --save");
+                $result  = Process::path(base_path())->timeout(120)->run("npm install {$pkgPath} --save");
                 if (! $result->successful()) {
                     throw new \RuntimeException($result->errorOutput());
                 }
@@ -98,7 +98,7 @@ class InstallCommand extends Command
 
             // ── Step 10: Build frontend ───────────────────────────────────────
             $this->task('Build frontend (npm run build)', function () {
-                $result = Process::path(base_path())->run('npm run build');
+                $result = Process::path(base_path())->timeout(300)->run('npm run build');
                 if (! $result->successful()) {
                     throw new \RuntimeException($result->errorOutput());
                 }
